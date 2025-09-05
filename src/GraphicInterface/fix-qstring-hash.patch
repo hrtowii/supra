@@ -1,23 +1,20 @@
 --- a/include/nodes/internal/QStringStdHash.hpp
 +++ b/include/nodes/internal/QStringStdHash.hpp
-@@ -1,18 +1,20 @@
+@@ -1,18 +1,2 @@
  #pragma once
- #include <functional>
- #include <QtCore/QString>
- #include <QtCore/QVariant>
-+#include <QtCore/qglobal.h>
-+
-+#if QT_VERSION < QT_VERSION_CHECK(5, 9, 0)
- namespace std
- {
- template<>
- struct hash<QString>
- {
-   inline std::size_t
-   operator()(QString const &s) const
-   {
-     return qHash(s);
-   }
- };
- }
-+#endif
+-#include <functional>
+-#include <QtCore/QString>
+-#include <QtCore/QVariant>
+-namespace std
+-{
+-template<>
+-struct hash<QString>
+-{
+-  inline std::size_t
+-  operator()(QString const &s) const
+-  {
+-    return qHash(s);
+-  }
+-};
+-}
++// QString hash specialization removed - Qt provides it natively

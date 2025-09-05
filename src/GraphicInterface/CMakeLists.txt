@@ -37,7 +37,8 @@ ExternalProject_Add(
 	GIT_REPOSITORY ${NodeEditor_GIT_REPOSITORY}
 	GIT_TAG ${NodeEditor_GIT_TAG}
 	#--Patch step-----------------
-    PATCH_COMMAND git apply "${CMAKE_CURRENT_SOURCE_DIR}/fix-qstring-hash.patch" || echo "Patch already applied or failed"
+	PATCH_COMMAND echo "#pragma once" > "${NodeEditor_DIR}/include/nodes/internal/QStringStdHash.hpp"
+    # PATCH_COMMAND git apply "${CMAKE_CURRENT_SOURCE_DIR}/fix-qstring-hash.patch" || echo "Patch already applied or failed"
 	#--Configure step-------------
 	CMAKE_ARGS
 	  -DCMAKE_RUNTIME_OUTPUT_DIRECTORY:PATH=${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
