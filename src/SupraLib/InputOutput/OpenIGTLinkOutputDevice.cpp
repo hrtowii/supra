@@ -30,7 +30,15 @@
 
 #include <iostream>
 #include <thread>
-#include <tbb/flow_graph.h>
+#ifndef Q_MOC_RUN
+#if defined(emit)
+    #undef emit
+    #include <tbb/flow_graph.h>
+    #define emit // restore the macro definition of "emit", as it was defined in qtmetamacros.h
+#else
+    #include <tbb/flow_graph.h>
+#endif // defined(emit)
+#endif // Q_MOC_RUN
 #include <cmath>
 
 #include "OpenIGTLinkOutputDevice.h"

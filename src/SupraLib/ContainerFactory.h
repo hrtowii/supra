@@ -19,8 +19,24 @@
 #include <vector>
 #include <mutex>
 #include <thread>
-#include <tbb/concurrent_unordered_map.h>
-#include <tbb/concurrent_queue.h>
+#ifndef Q_MOC_RUN
+#if defined(emit)
+    #undef emit
+    #include <tbb/concurrent_unordered_map.h>
+    #define emit // restore the macro definition of "emit", as it was defined in qtmetamacros.h
+#else
+    #include <tbb/concurrent_unordered_map.h>
+#endif // defined(emit)
+#endif // Q_MOC_RUN
+#ifndef Q_MOC_RUN
+#if defined(emit)
+    #undef emit
+    #include <tbb/concurrent_queue.h>
+    #define emit // restore the macro definition of "emit", as it was defined in qtmetamacros.h
+#else
+    #include <tbb/concurrent_queue.h>
+#endif // defined(emit)
+#endif // Q_MOC_RUN
 
 namespace supra
 {
