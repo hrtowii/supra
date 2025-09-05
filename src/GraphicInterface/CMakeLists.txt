@@ -124,6 +124,12 @@ LINK_DIRECTORIES(SUPRA_GUI
 	${SUPRA_Lib_LIBDIRS}
 )
 
+set_property(SOURCE ${SOURCES} ${HEADERS} ${MOC_HEADERS} 
+    PROPERTY SKIP_AUTOMOC ON)
+
+# Then manually run MOC only on the Qt-specific headers
+qt5_wrap_cpp(MOC_SOURCES ${MOC_HEADERS})
+
 add_executable(SUPRA_GUI ${SOURCES} ${HEADERS} ${MOC_HEADERS} ${FORMS} ${UIS})
 
 TARGET_COMPILE_DEFINITIONS(SUPRA_GUI
