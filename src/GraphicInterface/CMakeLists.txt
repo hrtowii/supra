@@ -18,7 +18,7 @@ include(ExternalProject)
 
 SET(NodeEditor_DIR "${CMAKE_CURRENT_BINARY_DIR}/NodeEditor")
 SET(NodeEditor_GIT_REPOSITORY "https://github.com/goeblr/nodeeditor.git" CACHE STRING "")
-SET(NodeEditor_GIT_TAG "3bcba3740d68932f3ffaa4b3dc73e624fe51e2db" CACHE STRING "")
+SET(NodeEditor_GIT_TAG "2340a0b4159bb5be30c5eeaa5eb1a9a4dbcee8d9" CACHE STRING "")
 ExternalProject_Add( 
 	NodeEditor
 	PREFIX "${NodeEditor_DIR}"
@@ -36,6 +36,8 @@ ExternalProject_Add(
 	#--Download step--------------
 	GIT_REPOSITORY ${NodeEditor_GIT_REPOSITORY}
 	GIT_TAG ${NodeEditor_GIT_TAG}
+	#--Patch step-----------------
+    PATCH_COMMAND git apply "${CMAKE_CURRENT_SOURCE_DIR}/fix-qstring-hash.patch" || echo "Patch already applied or failed"
 	#--Configure step-------------
 	CMAKE_ARGS
 	  -DCMAKE_RUNTIME_OUTPUT_DIRECTORY:PATH=${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
