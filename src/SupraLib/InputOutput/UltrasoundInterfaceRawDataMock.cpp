@@ -292,6 +292,56 @@ catch (const std::exception& e) {
     auto mockDataHost = make_shared<Container<int16_t>>(LocationHost, ContainerFactory::getNextStream(), m_numel);
     m_mockDataStreams[m_sequenceIndex]->read(reinterpret_cast<char*>(mockDataHost->get()), m_numel * sizeof(int16_t));
     
+	static int frameNum = 0;
+    frameNum++;
+    
+    if (frameNum % 10 == 1) { // Save every 10th frame to avoid spam
+        logging::log_info("Dumping frame ", frameNum, " to PGM");
+        
+        // Based on your metadata: 64 channels, 712704 samples, 5568 scanlines
+        // Let's visualize one scanline (64 channels x numSamples)
+        int channels = 64;
+        int samples = 712704 / 5568; // samples per scanline = ~128
+        int scanlineToShow = 0; // first scanline
+        
+        // Create a simple bitmap
+        std::vector<uint8_t> imageData(channels * samples);
+        
+        // Find min/max for scaling
+        int16_t minVal = 32767, maxVal = -32768;
+        for (int i = 0; i < channels * samples; i++) {
+            int16_t val = mockDataHost->get()[scanlineToShow * channels * samples + i];
+            minVal = std::min(minVal, val);
+            maxVal = std::max(maxVal, val);
+        }
+        
+        logging::log_info("Data range: [", minVal, ", ", maxVal, "]");
+        
+        // Convert to 0-255 range
+        for (int row = 0; row < samples; row++) {
+            for (int col = 0; col < channels; col++) {
+                int16_t val = mockDataHost->get()[scanlineToShow * channels * samples + row * channels + col];
+                double normalized = (maxVal != minVal) ? 
+                    static_cast<double>(val - minVal) / (maxVal - minVal) : 0.0;
+                imageData[row * channels + col] = static_cast<uint8_t>(normalized * 255.0);
+            }
+        }
+        
+        // Write simple PGM file to /supra/data
+        char filename[256];
+        snprintf(filename, sizeof(filename), "/supra/data/frame_%06d.pgm", frameNum);
+        
+        FILE* f = fopen(filename, "wb");
+        if (f) {
+            fprintf(f, "P5\n%d %d\n255\n", channels, samples);
+            fwrite(imageData.data(), 1, channels * samples, f);
+            fclose(f);
+            logging::log_info("Saved frame to: ", filename);
+        } else {
+            logging::log_error("Failed to open file: ", filename);
+        }
+    }
+	
     // CRITICAL: Use LocationHost instead of LocationGpu
     m_pMockData = make_shared<Container<int16_t>>(LocationHost, *mockDataHost);
     
@@ -304,6 +354,10 @@ catch (const std::exception& e) {
             m_lastFrame = true;
         }
     }
+	// logging::log_info("MOCK INTERFACE: Created frame data, type = ", m_pMockData ? "valid" : "NULL");
+    // if (m_pMockData) {
+    //     logging::log_info("MOCK INTERFACE: Frame data size = ", m_pMockData->size());
+    // }
 }
 
 	bool UltrasoundInterfaceRawDataMock::ready()
