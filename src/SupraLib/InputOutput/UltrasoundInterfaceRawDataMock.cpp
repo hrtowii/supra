@@ -53,42 +53,120 @@ namespace supra
 			setUpTimer(m_frequency);
 		}
 
+		// try
+		// {
+		// 	m_protoRawData = RxBeamformerParameters::readMetaDataForMock(m_mockMetadataFilename);
+
+		// 	m_numel = m_protoRawData->getNumReceivedChannels()*m_protoRawData->getNumSamples()*m_protoRawData->getNumScanlines();
+
+		// 	// initialize m_mockDataStreams and m_sequenceLengths by getting the file sizes of all datafiles
+		// 	m_mockDataStramReadBuffers.resize(m_mockDataFilenames.size());
+		// 	m_mockDataStreams.resize(m_mockDataFilenames.size());
+		// 	m_sequenceLengths.resize(m_mockDataFilenames.size());
+		// 	for (size_t k = 0; k < m_mockDataFilenames.size(); k++)
+		// 	{
+		// 		// In order to maximize reading performance, the ifstream needs a large read buffer
+		// 		m_mockDataStramReadBuffers[k].resize(128 * 1024, '\0');
+		// 		m_mockDataStreams[k] = std::shared_ptr<std::ifstream>(new std::ifstream);
+		// 		m_mockDataStreams[k]->open(m_mockDataFilenames[k], std::ifstream::ate | std::ifstream::binary);
+		// 		if (!m_mockDataStreams[k]->good())
+		// 		{
+		// 			logging::log_error("UltrasoundInterfaceRawDataMock: Error opening mock file ", m_mockDataFilenames[k]);
+		// 			throw std::runtime_error("UltrasoundInterfaceRawDataMock: Error opening mock file ");
+		// 		}
+		// 		m_mockDataStreams[k]->rdbuf()->pubsetbuf(m_mockDataStramReadBuffers[k].data(), m_mockDataStramReadBuffers[k].size());	
+		// 		size_t filesizeBytes = m_mockDataStreams[k]->tellg();
+		// 		m_mockDataStreams[k]->seekg(0);
+
+		// 		m_sequenceLengths[k] = filesizeBytes / (m_numel * sizeof(int16_t));
+		// 	}
+
+		// 	readNextFrame();
+		// 	m_ready = true;
+		// }
+		// catch (std::exception e)
+		// {
+		// 	logging::log_error("UltrasoundInterfaceRawDataMock: Caught exception preparing mock meta or mock file");
+		// 	m_ready = false;
+		// }
 		try
-		{
-			m_protoRawData = RxBeamformerParameters::readMetaDataForMock(m_mockMetadataFilename);
-
-			m_numel = m_protoRawData->getNumReceivedChannels()*m_protoRawData->getNumSamples()*m_protoRawData->getNumScanlines();
-
-			// initialize m_mockDataStreams and m_sequenceLengths by getting the file sizes of all datafiles
-			m_mockDataStramReadBuffers.resize(m_mockDataFilenames.size());
-			m_mockDataStreams.resize(m_mockDataFilenames.size());
-			m_sequenceLengths.resize(m_mockDataFilenames.size());
-			for (size_t k = 0; k < m_mockDataFilenames.size(); k++)
-			{
-				// In order to maximize reading performance, the ifstream needs a large read buffer
-				m_mockDataStramReadBuffers[k].resize(128 * 1024, '\0');
-				m_mockDataStreams[k] = std::shared_ptr<std::ifstream>(new std::ifstream);
-				m_mockDataStreams[k]->open(m_mockDataFilenames[k], std::ifstream::ate | std::ifstream::binary);
-				if (!m_mockDataStreams[k]->good())
-				{
-					logging::log_error("UltrasoundInterfaceRawDataMock: Error opening mock file ", m_mockDataFilenames[k]);
-					throw std::runtime_error("UltrasoundInterfaceRawDataMock: Error opening mock file ");
-				}
-				m_mockDataStreams[k]->rdbuf()->pubsetbuf(m_mockDataStramReadBuffers[k].data(), m_mockDataStramReadBuffers[k].size());	
-				size_t filesizeBytes = m_mockDataStreams[k]->tellg();
-				m_mockDataStreams[k]->seekg(0);
-
-				m_sequenceLengths[k] = filesizeBytes / (m_numel * sizeof(int16_t));
-			}
-
-			readNextFrame();
-			m_ready = true;
-		}
-		catch (std::exception e)
-		{
-			logging::log_error("UltrasoundInterfaceRawDataMock: Caught exception preparing mock meta or mock file");
-			m_ready = false;
-		}
+{
+    m_protoRawData = RxBeamformerParameters::readMetaDataForMock(m_mockMetadataFilename);
+    
+    // Debug the parsed values
+    auto channels = m_protoRawData->getNumReceivedChannels();
+    auto samples = m_protoRawData->getNumSamples();
+    auto scanlines = m_protoRawData->getNumScanlines();
+    
+    logging::log_info("Raw parsed metadata values:");
+    logging::log_info("  getNumReceivedChannels(): ", channels);
+    logging::log_info("  getNumSamples(): ", samples);
+    logging::log_info("  getNumScanlines(): ", scanlines);
+    
+    m_numel = channels * samples * scanlines;
+    logging::log_info("Calculated m_numel: ", m_numel);
+    
+    // Sanity check against actual file size
+    std::ifstream testFile(m_mockDataFilenames[0], std::ios::binary | std::ios::ate);
+    if (!testFile.is_open()) {
+        throw std::runtime_error("Could not open file for size check: " + m_mockDataFilenames[0]);
+    }
+    size_t actualFileSize = testFile.tellg();
+    testFile.close();
+    
+    size_t expectedNumelFromFile = actualFileSize / sizeof(int16_t);
+    logging::log_info("File analysis:");
+    logging::log_info("  Actual file size: ", actualFileSize, " bytes (", actualFileSize/1024/1024, " MB)");
+    logging::log_info("  Expected m_numel from file size: ", expectedNumelFromFile);
+    
+    // CRITICAL FIX: Override if parser gave unreasonable values
+    if (m_numel > expectedNumelFromFile * 2 || m_numel < expectedNumelFromFile / 2) {
+        logging::log_info("Parser gave unreasonable m_numel (", m_numel, "), using file-based calculation");
+        m_numel = expectedNumelFromFile;
+    }
+    
+    // Additional safety limit
+    const size_t MAX_REASONABLE_NUMEL = 100000000;  // 100M elements = ~200MB
+    if (m_numel > MAX_REASONABLE_NUMEL) {
+        logging::log_error("m_numel still too large, capping at safety limit");
+        m_numel = std::min(m_numel, expectedNumelFromFile);
+    }
+    
+    logging::log_info("FINAL m_numel: ", m_numel, " (", (m_numel * sizeof(int16_t))/1024/1024, " MB)");
+    
+    // Rest of initialization...
+    m_mockDataStramReadBuffers.resize(m_mockDataFilenames.size());
+    m_mockDataStreams.resize(m_mockDataFilenames.size());
+    m_sequenceLengths.resize(m_mockDataFilenames.size());
+    
+    for (size_t k = 0; k < m_mockDataFilenames.size(); k++)
+    {
+        m_mockDataStramReadBuffers[k].resize(128 * 1024, '\0');
+        m_mockDataStreams[k] = std::shared_ptr<std::ifstream>(new std::ifstream);
+        m_mockDataStreams[k]->open(m_mockDataFilenames[k], std::ifstream::ate | std::ifstream::binary);
+        
+        if (!m_mockDataStreams[k]->good()) {
+            logging::log_error("Error opening mock file ", m_mockDataFilenames[k]);
+            throw std::runtime_error("Error opening mock file");
+        }
+        
+        m_mockDataStreams[k]->rdbuf()->pubsetbuf(m_mockDataStramReadBuffers[k].data(), m_mockDataStramReadBuffers[k].size());
+        size_t filesizeBytes = m_mockDataStreams[k]->tellg();
+        m_mockDataStreams[k]->seekg(0);
+        m_sequenceLengths[k] = filesizeBytes / (m_numel * sizeof(int16_t));
+    }
+    
+    readNextFrame();
+    m_ready = true;
+}
+catch (const std::bad_alloc& e) {
+    logging::log_error("BAD_ALLOC: ", e.what(), " - attempted ", (m_numel * sizeof(int16_t))/1024/1024, " MB");
+    m_ready = false;
+}
+catch (const std::exception& e) {
+    logging::log_error("Exception: ", typeid(e).name(), " - ", e.what());
+    m_ready = false;
+}
 	}
 
 	void UltrasoundInterfaceRawDataMock::freeze()
@@ -184,24 +262,49 @@ namespace supra
 		}
 	}
 
-	void UltrasoundInterfaceRawDataMock::readNextFrame()
-	{
-		auto mockDataHost = make_shared<Container<int16_t> >(LocationHost, ContainerFactory::getNextStream(), m_numel);
+	// void UltrasoundInterfaceRawDataMock::readNextFrame()
+	// {
+	// 	auto mockDataHost = make_shared<Container<int16_t> >(LocationHost, ContainerFactory::getNextStream(), m_numel);
 
-		m_mockDataStreams[m_sequenceIndex]->read(reinterpret_cast<char*>(mockDataHost->get()), m_numel * sizeof(int16_t));
-		m_pMockData = make_shared<Container<int16_t> >(LocationGpu, *mockDataHost);
-		// advance to the next image and sequence where required
-		m_frameIndex = (m_frameIndex + 1) % m_sequenceLengths[m_sequenceIndex];
-		if (m_frameIndex == 0)
-		{
-			m_mockDataStreams[m_sequenceIndex]->seekg(0);
-			m_sequenceIndex = (m_sequenceIndex + 1) % m_sequenceLengths.size();
-			if (m_sequenceIndex == 0 && m_streamSequenceOnce)
-			{
-				m_lastFrame = true;
-			}
-		}
-	}
+	// 	m_mockDataStreams[m_sequenceIndex]->read(reinterpret_cast<char*>(mockDataHost->get()), m_numel * sizeof(int16_t));
+	// 	m_pMockData = make_shared<Container<int16_t> >(LocationGpu, *mockDataHost);
+	// 	// advance to the next image and sequence where required
+	// 	m_frameIndex = (m_frameIndex + 1) % m_sequenceLengths[m_sequenceIndex];
+	// 	if (m_frameIndex == 0)
+	// 	{
+	// 		m_mockDataStreams[m_sequenceIndex]->seekg(0);
+	// 		m_sequenceIndex = (m_sequenceIndex + 1) % m_sequenceLengths.size();
+	// 		if (m_sequenceIndex == 0 && m_streamSequenceOnce)
+	// 		{
+	// 			m_lastFrame = true;
+	// 		}
+	// 	}
+	// }
+	void UltrasoundInterfaceRawDataMock::readNextFrame()
+{
+    // Safety check before massive allocation
+    size_t frameSizeBytes = m_numel * sizeof(int16_t);
+    if (frameSizeBytes > 500 * 1024 * 1024) {  // 500 MB limit
+        throw std::runtime_error("Frame size too large: " + std::to_string(frameSizeBytes/1024/1024) + " MB");
+    }
+    
+    // Force ALL allocations to use host memory only
+    auto mockDataHost = make_shared<Container<int16_t>>(LocationHost, ContainerFactory::getNextStream(), m_numel);
+    m_mockDataStreams[m_sequenceIndex]->read(reinterpret_cast<char*>(mockDataHost->get()), m_numel * sizeof(int16_t));
+    
+    // CRITICAL: Use LocationHost instead of LocationGpu
+    m_pMockData = make_shared<Container<int16_t>>(LocationHost, *mockDataHost);
+    
+    // Advance frame logic...
+    m_frameIndex = (m_frameIndex + 1) % m_sequenceLengths[m_sequenceIndex];
+    if (m_frameIndex == 0) {
+        m_mockDataStreams[m_sequenceIndex]->seekg(0);
+        m_sequenceIndex = (m_sequenceIndex + 1) % m_sequenceLengths.size();
+        if (m_sequenceIndex == 0 && m_streamSequenceOnce) {
+            m_lastFrame = true;
+        }
+    }
+}
 
 	bool UltrasoundInterfaceRawDataMock::ready()
 	{

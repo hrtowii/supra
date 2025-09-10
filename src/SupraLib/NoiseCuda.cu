@@ -135,7 +135,7 @@ namespace supra
 
 		auto meanStdDevBefore = make_shared<Container<double> >(LocationGpu, in->getStream(), 2);
 		auto meanStdDevAfter = make_shared<Container<double> >(LocationGpu, in->getStream(), 2);
-		int scratchSize = 0;
+		size_t scratchSize = 0;
 		nppSafeCall(nppiMeanStdDevGetBufferHostSize_32f_C1R({ iHeight, iWidth*iDepth }, &scratchSize));
 		auto meanStdDevScratch = make_shared<Container<uint8_t> >(LocationGpu, in->getStream(), scratchSize);
 

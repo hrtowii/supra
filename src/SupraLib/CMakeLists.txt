@@ -24,7 +24,7 @@ ELSE()
 	MESSAGE( STATUS "Looking for TBB in '${TBB_ROOT}'")
 	SET(TBB_INCLUDE ${TBB_ROOT}/include)
 	SET(TBB_LIBS ${SUPRA_EXTERNALS_TBB_LIBS})
-	SET(TBB_LIBRARIES tbb pthread)
+	SET(TBB_LIBRARIES tbb Threads::Threads)
 ENDIF(WIN32)
 
 # find Ultrasonix interface

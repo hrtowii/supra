@@ -59,15 +59,15 @@ namespace supra
 		{
 			// Check whether there is enough free space for the requested buffer. 
 			size_t memoryFree;
-#ifdef HAVE_CUDA
-			size_t memoryTotal;
-			if (location == LocationGpu || location == LocationBoth)
-			{
-				cudaSafeCall(cudaMemGetInfo(&memoryFree, &memoryTotal));
-				memoryFree = static_cast<size_t>(std::max(static_cast<double>(memoryFree) - (static_cast<double>(memoryTotal) *0.02), 0.0));
-			}
-			else
-#endif
+// #ifdef HAVE_CUDA
+// 			size_t memoryTotal;
+// 			if (location == LocationGpu || location == LocationBoth)
+// 			{
+// 				cudaSafeCall(cudaMemGetInfo(&memoryFree, &memoryTotal));
+// 				memoryFree = static_cast<size_t>(std::max(static_cast<double>(memoryFree) - (static_cast<double>(memoryTotal) *0.02), 0.0));
+// 			}
+// 			else
+// #endif
 			{
 				// For the host memory we just rely on the 
 				memoryFree = numBytes;
@@ -108,15 +108,15 @@ namespace supra
 	{
 		logging::log_log("ContainerFactory: Initializing ", sm_numberStreams, " streams.");
 		sm_streamIndex = 0;
-#ifdef HAVE_CUDA
-		sm_streams.resize(sm_numberStreams);
-		for (size_t k = 0; k < sm_numberStreams; k++)
-		{
-			cudaSafeCall(cudaStreamCreateWithFlags(&(sm_streams[k]), cudaStreamNonBlocking));
-		}
-#else
+// #ifdef HAVE_CUDA
+// 		sm_streams.resize(sm_numberStreams);
+// 		for (size_t k = 0; k < sm_numberStreams; k++)
+// 		{
+// 			cudaSafeCall(cudaStreamCreateWithFlags(&(sm_streams[k]), cudaStreamNonBlocking));
+// 		}
+// #else
 		sm_streams.resize(sm_numberStreams, 0);
-#endif
+// #endif
 	}
 
 	uint8_t * ContainerFactory::allocateMemory(size_t numBytes, ContainerLocation location)
@@ -125,21 +125,29 @@ namespace supra
 		switch (location)
 		{
 		case LocationGpu:
-#ifdef HAVE_CUDA
-			cudaSafeCall(cudaMalloc((void**)&buffer, numBytes));
-#endif
+// #ifdef HAVE_CUDA
+// 			cudaSafeCall(cudaMalloc((void**)&buffer, numBytes));
+// #endif
+			logging::log_log("memory ", numBytes, " streams.");
+
+			buffer = new uint8_t[numBytes];
 			break;
 		case LocationBoth:
-#ifdef HAVE_CUDA
-			cudaSafeCall(cudaMallocManaged((void**)&buffer, numBytes));
-#endif
+// #ifdef HAVE_CUDA
+// 			cudaSafeCall(cudaMallocManaged((void**)&buffer, numBytes));
+// #endif
+			logging::log_log("memory ", numBytes, " streams.");
+
+			buffer = new uint8_t[numBytes];
 			break;
 		case LocationHost:
-#ifdef HAVE_CUDA
-			cudaSafeCall(cudaMallocHost((void**)&buffer, numBytes));
-#else
+// #ifdef HAVE_CUDA
+// 			cudaSafeCall(cudaMallocHost((void**)&buffer, numBytes));
+// #else
+			logging::log_log("memory ", numBytes, " streams.");
+
 			buffer = new uint8_t[numBytes];
-#endif
+// #endif
 			break;
 		default:
 			throw std::runtime_error("invalid argument: Container: Unknown location given");
@@ -237,11 +245,11 @@ namespace supra
 #endif
 			break;
 		case LocationHost:
-#ifdef HAVE_CUDA
-			cudaFreeHost(pointer);
-#else
+// #ifdef HAVE_CUDA
+// 			cudaFreeHost(pointer);
+// #else
 			delete[] pointer;
-#endif
+// #endif
 			break;
 		default:
 			break;
