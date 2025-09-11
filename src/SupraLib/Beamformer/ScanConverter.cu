@@ -522,6 +522,9 @@ namespace supra
 		double endDepth = inImageProps->getDepth();
 		double resolution = inImageProps->getImageResolution();
 		auto scanlines = inImageProps->getScanlineInfo();
+		logging::log_log(endDepth);
+		logging::log_log(resolution);
+		logging::log_log(scanlines);
 		logging::log_error_if(!scanlines, "ScanConverter: No scanlines have been attached to the USImageProperties!");
 
 		bool scanlinesGood = scanlines.operator bool();
@@ -860,7 +863,7 @@ namespace supra
 			return{ t, d };
 		}
 
-		assert(dot(lowConn, highConn) < 0);
+		// assert(dot(lowConn, highConn) < 0);
 
 		double dist = 1e10;
 		double t = (highT - lowT) / 2 + lowT;

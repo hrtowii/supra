@@ -64,7 +64,10 @@ namespace supra
 			if (location == LocationGpu || location == LocationBoth)
 			{
 				cudaSafeCall(cudaMemGetInfo(&memoryFree, &memoryTotal));
-				memoryFree = static_cast<size_t>(std::max(static_cast<double>(memoryFree) - (static_cast<double>(memoryTotal) *0.02), 0.0));
+				memoryFree = static_cast<size_t>(std::max(static_cast<double>(memoryFree) - (static_cast<double>(memoryTotal) *0.01), 0.0));
+				printf("GPU Memory: %zu MB total, %zu MB free\n", 
+           memoryTotal / (1024 * 1024), 
+           memoryFree / (1024 * 1024));
 			}
 			else
 #endif
@@ -120,48 +123,54 @@ namespace supra
 	}
 
 	uint8_t * ContainerFactory::allocateMemory(size_t numBytes, ContainerLocation location)
-	{
-		uint8_t* buffer = nullptr;
-		switch (location)
-		{
-		case LocationGpu:
+{
+    uint8_t* buffer = nullptr;
+    
+    switch (location)
+    {
+    case LocationGpu:
 #ifdef HAVE_CUDA
-			cudaSafeCall(cudaMalloc((void**)&buffer, numBytes));
-#endif
-			logging::log_log("memory ", numBytes, " streams.");
-
-			buffer = new uint8_t[numBytes];
-			break;
-		case LocationBoth:
-#ifdef HAVE_CUDA
-			cudaSafeCall(cudaMallocManaged((void**)&buffer, numBytes));
-#endif
-			logging::log_log("memory ", numBytes, " streams.");
-
-			buffer = new uint8_t[numBytes];
-			break;
-		case LocationHost:
-#ifdef HAVE_CUDA
-			cudaSafeCall(cudaMallocHost((void**)&buffer, numBytes));
+        cudaSafeCall(cudaMalloc((void**)&buffer, numBytes));
+        logging::log_log("memory ", numBytes, " streams.");
 #else
-			logging::log_log("memory ", numBytes, " streams.");
-
-			buffer = new uint8_t[numBytes];
+        throw std::runtime_error("CUDA not available but GPU allocation requested");
 #endif
-			break;
-		default:
-			throw std::runtime_error("invalid argument: Container: Unknown location given");
-		}
-		if (!buffer)
-		{
-			std::stringstream s;
-			s << "bad alloc: Container: Error allocating buffer of size " << numBytes << " in "
-				<< (location == LocationHost ? "LocationHost" : (location == LocationGpu ? "LocationGpu" : "LocationBoth"));
-			throw std::runtime_error(s.str());
-		}
-
-		return buffer;
-	}
+        break;
+        
+    case LocationBoth:
+#ifdef HAVE_CUDA
+        cudaSafeCall(cudaMallocManaged((void**)&buffer, numBytes));
+        logging::log_log("memory ", numBytes, " streams.");
+#else
+        // Fallback to host allocation if CUDA not available
+        logging::log_log("memory ", numBytes, " streams.");
+        buffer = new uint8_t[numBytes];
+#endif
+        break;
+        
+    case LocationHost:
+#ifdef HAVE_CUDA
+        cudaSafeCall(cudaMallocHost((void**)&buffer, numBytes));
+#else
+        logging::log_log("memory ", numBytes, " streams.");
+        buffer = new uint8_t[numBytes];
+#endif
+        break;
+        
+    default:
+        throw std::runtime_error("invalid argument: Container: Unknown location given");
+    }
+    
+    if (!buffer)
+    {
+        std::stringstream s;
+        s << "bad alloc: Container: Error allocating buffer of size " << numBytes << " in "
+          << (location == LocationHost ? "LocationHost" : (location == LocationGpu ? "LocationGpu" : "LocationBoth"));
+        throw std::runtime_error(s.str());
+    }
+    
+    return buffer;
+}
 
 	void ContainerFactory::freeBuffers(size_t numBytesMin, ContainerLocation location)
 	{

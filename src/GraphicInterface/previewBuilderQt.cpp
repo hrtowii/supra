@@ -658,7 +658,8 @@ void previewBuilderQT::processRecordObject(const shared_ptr<RecordObject> inMess
 
 	logging::log_info("=== Finished Processing Record Object ===");
 }
-	void previewBuilderQT::addImagePreviewWidget()
+	
+void previewBuilderQT::addImagePreviewWidget()
 	{
 		if (!m_haveImagePreview)
 		{

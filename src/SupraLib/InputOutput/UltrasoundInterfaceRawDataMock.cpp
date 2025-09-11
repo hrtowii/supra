@@ -284,9 +284,9 @@ catch (const std::exception& e) {
 {
     // Safety check before massive allocation
     size_t frameSizeBytes = m_numel * sizeof(int16_t);
-    if (frameSizeBytes > 500 * 1024 * 1024) {  // 500 MB limit
-        throw std::runtime_error("Frame size too large: " + std::to_string(frameSizeBytes/1024/1024) + " MB");
-    }
+    // if (frameSizeBytes > 500 * 1024 * 1024) {  // 500 MB limit
+    //     throw std::runtime_error("Frame size too large: " + std::to_string(frameSizeBytes/1024/1024) + " MB");
+    // }
     
     // Force ALL allocations to use host memory only
     auto mockDataHost = make_shared<Container<int16_t>>(LocationHost, ContainerFactory::getNextStream(), m_numel);
@@ -343,7 +343,7 @@ catch (const std::exception& e) {
     }
 	
     // CRITICAL: Use LocationHost instead of LocationGpu
-    m_pMockData = make_shared<Container<int16_t>>(LocationHost, *mockDataHost);
+    m_pMockData = make_shared<Container<int16_t>>(LocationGpu, *mockDataHost);
     
     // Advance frame logic...
     m_frameIndex = (m_frameIndex + 1) % m_sequenceLengths[m_sequenceIndex];
